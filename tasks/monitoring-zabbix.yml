@@ -9,7 +9,7 @@
       name: usbip_client
       userparameters:
         - key: usbip_client.missing_devices
-          command: /usr/bin/env bash -c 'source {{ usbip_client__configuration_file }} && imported_devices=$(/usr/bin/env usbip port | grep --only-matching --extended-regexp '\([0-9a-fA-F:]+\)$' | sed 's/(\([0-9a-fA-F:]\+\))$/\1/') && for device in $DEVICES; do if ! echo "${imported_devices}" | grep --quiet "${device}"; then echo -n "${device} "; fi; done'
+          command: /usr/bin/env bash -c "source {{ usbip_client__configuration_file }} && imported_devices=\$(/usr/bin/env usbip port | grep --only-matching --extended-regexp '\([0-9a-fA-F:]+\)$' | sed 's/(\([0-9a-fA-F:]\+\))$/\1/') && for device in \$DEVICES; do if ! echo \"\${imported_devices}\" | grep --quiet \"\${device}\"; then echo -n \"\${device} \"; fi; done"
           comment: Get list of missing imported usb devices ids
       state: present
   tags: ['usbip-client', 'usbip-client-monitoring']
