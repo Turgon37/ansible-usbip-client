@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+
+DEBUG=0
+VERBOSE=0
+ACTION=bindAll
+SERVER=
+
+# Print a msg to stdout if simple verbose is set
+# param[in](string) : the msg to write in stdout
+function verbose() {
+  if [[ "${VERBOSE}" -eq 1 ]]; then
+    echo -e "$@"
+  fi
+}
+
+function debug() {
+  if [[ "${DEBUG}" -eq 1 ]]; then
+    echo -e "DEBUG: $@"
+  fi
+}
+
+# Print a msg to stderr
+# param[in](string) : the msg to write in stderr
+function error() {
+  echo "ERROR: $@" 1>&2
+}
+
+
+# Bind all configured devices
+function action_bindAll() {
+  # loop over each manually configured devices
+  for device in $DEVICES; do
+    # check availability
+    if ! echo "$available_devices" | grep --quiet "$device"; then
+      error "the device ${device} does not exists on the remote server"
+      exit 1
+    fi
+    # check export status
+    if echo "$imported_devices" | grep --quiet "$device"; then
+      verbose "the device ${device} is already imported"
+      continue
+    fi
+
+    # bind
+    busid=$(echo "$available_devices" | grep "$device" | sed 's/\s*\([0-9\.-]\+\):.*$/\1/')
+    verbose "importing device ${device} with busid ${busid}  ..."
+    usbip attach "--remote=$SERVER" "--busid=${busid}"
+    ret=$?
+    if [[ "${ret}" -eq 0 ]]; then
+      verbose "...ok"
+    else
+      error "during bind, code : ${ret}"
+    fi
+  done
+}
+
+function action_unbindAll() {
+  local imported_device_ports=$(echo "$imported_devices" | sed 's/port=\([0-9]\+\)#.*$/\1/')
+  for portid in $imported_device_ports; do
+    verbose "unbinding device from portid ${portid}  ..."
+    usbip detach "--port=${portid}"
+    ret=$?
+    if [[ "${ret}" -eq 0 ]]; then
+      verbose "...ok"
+    else
+      error "during unbind, code : ${ret}"
+    fi
+  done
+}
+
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --server)
+      SERVER=$2
+      shift 2
+      ;;
+    --unbind)
+      ACTION='unbindAll'
+      shift 1
+      ;;
+    -v|--verbose)
+      VERBOSE=1
+      shift 1
+      ;;
+    --debug)
+      VERBOSE=1
+      DEBUG=1
+      shift 1
+      ;;
+    --)
+      shift 1
+      arguments=$@
+      break;
+      ;;
+    *)    # unknown option
+      error "error unknown option $1"
+      exit 1
+      ;;
+  esac
+done
+
+# Main
+
+# Source devices configurations
+. {{ usbip_client__configuration_file }}
+
+available_devices=$(/usr/bin/env usbip list --parsable "--remote=$SERVER")
+imported_devices=$(/usr/bin/env usbip port | grep --only-matching --extended-regexp '(^Port [0-9]+|\([0-9a-fA-F:]+\)$)' | sed 'N; s/Port\s*\([0-9]\+\).*(\([0-9a-fA-F:]\+\))$/port=\1#device=\2/')
+
+debug "available devices : $available_devices"
+debug "imported devices : $imported_devices"
+
+if declare -f -F "action_${ACTION}" >/dev/null; then
+  action_${ACTION}
+else
+  error "function action_${ACTION} does not exist"
+  exit 2
+fi
+
+exit 0

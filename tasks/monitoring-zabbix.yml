@@ -1,0 +1,15 @@
+---
+
+- name: Configure zabbix userparameters available by vcgencmd
+  include_role:
+    name: zabbix-agent
+    tasks_from: userparameter
+  vars:
+    zabbix_agent__userparameter:
+      name: usbip_client
+      userparameters:
+        - key: usbip_client.missing_devices
+          command: /usr/bin/env bash -c 'source {{ usbip_client__configuration_file }} && imported_devices=$(/usr/bin/env usbip port | grep --only-matching --extended-regexp '\([0-9a-fA-F:]+\)$' | sed 's/(\([0-9a-fA-F:]\+\))$/\1/') && for device in $DEVICES; do if ! echo "${imported_devices}" | grep --quiet "${device}"; then echo -n "${device} "; fi; done'
+          comment: Get list of missing imported usb devices ids
+      state: present
+  tags: ['usbip-client', 'usbip-client-monitoring']

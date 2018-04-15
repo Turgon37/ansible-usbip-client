@@ -1,0 +1,9 @@
+---
+
+- name: Install usbip client packages
+  apt:
+    name:            '{{ item }}'
+    default_release: "{{ ansible_distribution_release~'-backports' if usbip_client__packages_use_backports else omit }}"
+    state:           present
+  with_items: '{{ usbip_client__packages_names }}'
+  when: ansible_os_family == 'Debian'

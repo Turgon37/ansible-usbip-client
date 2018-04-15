@@ -1,0 +1,6 @@
+---
+
+- name: Assert required variables
+  assert:
+    that:
+      - usbip_client__server_host is defined

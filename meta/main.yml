@@ -1,0 +1,12 @@
+galaxy_info:
+  author: Pierre GINDRAUD
+  description: This role configure usbip client to attach remote usb devices
+  license: MIT
+  min_ansible_version: 2.4
+  platforms:
+    - name: Armbian
+      versions:
+        - 9
+  galaxy_tags: []
+
+dependencies: []

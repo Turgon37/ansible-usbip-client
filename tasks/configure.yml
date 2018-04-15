@@ -1,0 +1,65 @@
+---
+
+- name: Load usbip modules into kernel
+  modprobe:
+    name:  '{{ item }}'
+    state: present
+  with_items: '{{ usbip_client__kernel_modules }}'
+
+- name: Ensure modules are loaded on boot
+  copy:
+    dest:    '/etc/modules-load.d/{{ item }}.conf'
+    content: '{{ item }}'
+  with_items: '{{ usbip_client__kernel_modules }}'
+  when: ansible_service_mgr == 'systemd'
+
+- name: List exportable devices
+  shell: "/usr/bin/env usbip list --parsable --remote='{{ usbip_client__server_host }}' | grep --extended-regexp '^\\s+[0-9\\.-]+:'"
+  register: _usbip_client__exportables
+  changed_when: False
+  check_mode: False
+
+- name: Create list of exportable devices
+  set_fact:
+    _usbip_client__exportable_devices: "{{ _usbip_client__exportable_devices|d({})|combine({
+                                              item|regex_replace('^.*\\((?P<usbid>[0-9a-fA-F:]+)\\)$', '\\g<usbid>'): item|regex_replace('^\\s*(?P<busid>[0-9\\.-]+):.*$', '\\g<busid>')
+                                            }) }}"
+  with_items: '{{ _usbip_client__exportables.stdout_lines }}'
+
+- name: Check if required devices are available
+  fail:
+    msg: "The usbdevice '{{ item }}' is not exportable because not available on server"
+  when: item not in _usbip_client__exportable_devices.keys()
+  with_items: '{{ usbip_client__import_devices }}'
+
+- name: Install systemd service environment
+  template:
+    src:  service.environment.j2
+    dest: '{{ usbip_client__service_environment }}'
+  when: usbip_client__service_environment is defined
+  notify: ['reload-usbip-client']
+
+- name: Install usbip devices configuration
+  template:
+    src:  usbip.config.j2
+    dest: '{{ usbip_client__configuration_file }}'
+  notify: ['reload-usbip-client']
+
+- name: Create custom scripts directory
+  file:
+    path:  '{{ usbip_client__custom_scripts_directory }}'
+    owner: root
+    group: root
+    mode:  0755
+    state: directory
+
+- name: Install usbip custom scripts
+  template:
+    src:   '{{ item }}.j2'
+    dest:  '{{ usbip_client__custom_scripts_directory }}/{{ item }}'
+    owner: root
+    group: root
+    mode:  0755
+  with_items:
+    - import-devices.sh
+  notify: ['reload-usbip-client']

@@ -1,0 +1,43 @@
+---
+# defaults file for usbip-client
+
+# Choose the monitoring backend to configure (if available)
+#usbip_client__monitoring:
+
+# The name of the usbip packages
+usbip_client__packages_names:
+  - usbip
+
+# Fetch packages from backports for Debian families only
+usbip_client__packages_use_backports: False
+
+# List of kernel modules to keep loaded
+usbip_client__kernel_modules:
+  - usbip-core
+  - vhci-hcd
+
+# Usbip custom scripts configuration file
+usbip_client__configuration_file: /etc/usbip-imports.conf
+
+# Where to store custom scripts
+usbip_client__custom_scripts_directory: /opt/usbip-client
+
+
+### Service configuration
+# The path to the systemd service definition file
+usbip_client__systemd_service_path: '/etc/systemd/system/{{ usbip_client__service_name }}.service'
+
+# Path to optional environment file
+#usbip_client__service_environment:
+
+# The name of the systemd service
+usbip_client__service_name: usbip
+
+# If true the service will be started and enabled
+usbip_client__service_enabled: True
+
+
+### USBIP configuration
+#usbip_client__server_host:
+
+usbip_client__import_devices: []

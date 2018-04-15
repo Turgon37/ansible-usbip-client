@@ -1,0 +1,35 @@
+---
+# tasks file for usbip-client
+
+- name: Include the OS specific variables
+  include_vars: '{{ item }}'
+  with_first_found:
+    - files:
+        - '{{ ansible_distribution }}-{{ ansible_distribution_version }}.yml'
+        - '{{ ansible_distribution }}.yml'
+        - '{{ ansible_os_family }}.yml'
+        - defaults.yml
+      skip: true
+  tags: ['always']
+
+- name: Check role availability
+  fail:
+    msg: 'This module only works on Debian or derivatives like Ubuntu'
+  when: ansible_os_family != 'Debian'
+  tags: ['always']
+
+- import_tasks: init.yml
+  tags: ['always']
+
+- import_tasks: install.yml
+  tags: ['usbip-client', 'usbip-client-install']
+
+- import_tasks: configure.yml
+  tags: ['usbip-client', 'usbip-client-configure']
+
+- import_tasks: service.yml
+  tags: ['usbip-client', 'usbip-client-service']
+
+- include_tasks: 'monitoring-{{ usbip_client__monitoring }}.yml'
+  when: usbip_client__monitoring is defined
+  tags: ['usbip-client', 'usbip-client-monitoring']

@@ -1,0 +1,21 @@
+[Unit]
+Description=USB/IP client
+Documentation=man:usbip(8)
+Documentation=http://usbip.sourceforge.net/
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+{% if usbip_client__service_environment is defined %}
+EnvironmentFile={{ usbip_client__service_environment }}
+{% endif %}
+# Exports devices on service start
+ExecStart={{ usbip_client__custom_scripts_directory }}/import-devices.sh --server {{ '$SERVER' if usbip_client__service_environment is defined else usbip_client__server_host }}
+# Recheck exported devices
+ExecReload={{ usbip_client__custom_scripts_directory }}/import-devices.sh --server {{ '$SERVER' if usbip_client__service_environment is defined else usbip_client__server_host }}
+# unbind all devices
+ExecStop={{ usbip_client__custom_scripts_directory }}/import-devices.sh --server {{ '$SERVER' if usbip_client__service_environment is defined else usbip_client__server_host }} --unbind
+
+[Install]
+WantedBy=multi-user.target

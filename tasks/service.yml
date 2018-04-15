@@ -1,0 +1,28 @@
+---
+
+- name: Ensure systemd service directory is created
+  file:
+    path:  '{{ usbip_client__systemd_service_path|dirname }}'
+    state: directory
+  when: ansible_service_mgr == 'systemd'
+
+- name: Install systemd service configuration
+  template:
+    src:  systemd.service.j2
+    dest: '{{ usbip_client__systemd_service_path }}'
+  when: ansible_service_mgr == 'systemd'
+  notify: ['reload-usbip-client']
+  register: _usbip_client__service
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+  when: ansible_service_mgr == 'systemd' and _usbip_client__service is changed
+
+- meta: flush_handlers
+
+- name: Ensure Usbip daemon is started and enabled on boot
+  service:
+    name:    '{{ usbip_client__service_name }}'
+    enabled: '{{ usbip_client__service_enabled|bool }}'
+    state:   "{{ usbip_client__service_enabled|bool|ternary('started', 'stopped') }}"
